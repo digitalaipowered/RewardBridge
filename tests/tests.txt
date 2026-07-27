@@ -1,7 +1,7 @@
 # Tests
 ## Test 1 - Public economics load [sanity]
 Viewport: desktop
-Description: Verifies the controlled-beta landing page exposes the automatic publisher review threshold and fixed CPX reward model.
+Description: Verifies the active CPX landing page exposes the automatic publisher review threshold and fixed reward model.
 Steps:
 1. Navigate to the app
 2. Wait for the landing page to load
@@ -9,12 +9,12 @@ Steps:
 Expected: The page shows automatic publisher payout review at $25, a $2 end-user floor, a 45% completion reward, and a 100% user bonus pass-through.
 ## Test 2 - Personal email access and legal links are visible
 Viewport: mobile
-Description: Confirms beginner publishers can access a real privacy page, the access form, and the controlled onboarding boundary without a business-domain email.
+Description: Confirms publishers can access the privacy page, personal-email sign-in, and the active CPX rollout notice on mobile.
 Steps:
 1. Navigate to the app on mobile
 2. Scroll to Publisher access
 3. Open Privacy and verify the CPX disclosure appears
-Expected: The page accepts personal email addresses, Privacy opens successfully with CPX processing disclosure, and the site does not claim managed CPX traffic is active.
+Expected: The page accepts personal email addresses, Privacy opens with CPX processing disclosure, and the site states CPX App 34813 is approved and active.
 ## Test 3 - Invalid survey session is rejected
 Viewport: desktop
 Description: Verifies an invalid hosted survey session fails closed without exposing survey links or an embedded provider wall.
