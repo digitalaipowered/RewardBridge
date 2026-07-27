@@ -1,0 +1,56 @@
+name: Deploy merged misty-mode Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type DEPLOY-MERGED-WORKER after reviewing the preserved routes
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: misty-mode-a1d4-deployment
+  cancel-in-progress: false
+
+jobs:
+  validate-and-deploy:
+    if: ${{ inputs.confirmation == 'DEPLOY-MERGED-WORKER' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Validate merged Worker syntax and route guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check cloudflare/merged-worker.js
+          grep -q "url.pathname === '/ads.txt'" cloudflare/merged-worker.js
+          grep -q "url.pathname === '/api/games/launch'" cloudflare/merged-worker.js
+          grep -q "url.pathname === '/rewardbridge/api/platform-status'" cloudflare/merged-worker.js
+          grep -q "managedNetworkEnabled: false" cloudflare/merged-worker.js
+          if grep -E '(CPX_SECURE_HASH|CPX_POSTBACK_TOKEN|PAYPAL_CLIENT_SECRET|SUPABASE_SERVICE_ROLE_KEY|sb_secret_)' cloudflare/merged-worker.js; then
+            echo 'Forbidden secret marker found in Worker source.' >&2
+            exit 1
+          fi
+
+      - name: Deploy through Wrangler
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+
+      - name: Smoke test preserved and new routes
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 10
+          curl --fail --silent --show-error https://misty-mode-a1d4.digitala-ipowered.workers.dev/health | grep -q 'browser-games-worker+rewardbridge-gateway'
+          curl --fail --silent --show-error https://misty-mode-a1d4.digitala-ipowered.workers.dev/ads.txt | grep -q '#gpx-property-F7FCN'
+          curl --fail --silent --show-error https://misty-mode-a1d4.digitala-ipowered.workers.dev/rewardbridge/health | grep -q 'rewardbridge-gateway'
+          curl --fail --silent --show-error https://misty-mode-a1d4.digitala-ipowered.workers.dev/rewardbridge/api/platform-status | grep -q 'publisherPayoutMinimum'
