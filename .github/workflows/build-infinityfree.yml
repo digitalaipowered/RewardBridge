@@ -1,0 +1,80 @@
+name: Build InfinityFree upload package
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rewardbridge-infinityfree-build
+  cancel-in-progress: true
+
+jobs:
+  build-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Mirror verified AppDeploy release
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf mirror dist RewardBridge-InfinityFree-upload.zip
+          mkdir -p mirror dist
+          wget --mirror --convert-links --adjust-extension --page-requisites --no-parent \
+            --domains 6028ef2dad7c557eb4.v2.appdeploy.ai \
+            --directory-prefix mirror \
+            https://6028ef2dad7c557eb4.v2.appdeploy.ai/
+          cp -a mirror/6028ef2dad7c557eb4.v2.appdeploy.ai/. dist/
+
+      - name: Add InfinityFree safeguards
+        shell: bash
+        run: |
+          cat > dist/.htaccess <<'HTACCESS'
+          Options -Indexes
+          DirectoryIndex index.html
+          <IfModule mod_headers.c>
+            Header always set X-Content-Type-Options "nosniff"
+            Header always set Referrer-Policy "strict-origin-when-cross-origin"
+            Header always set Permissions-Policy "camera=(), geolocation=(), payment=()"
+          </IfModule>
+          <IfModule mod_rewrite.c>
+            RewriteEngine On
+            RewriteCond %{REQUEST_FILENAME} !-f
+            RewriteCond %{REQUEST_FILENAME} !-d
+            RewriteRule ^ index.html [L]
+          </IfModule>
+          HTACCESS
+
+      - name: Validate release
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in index.html privacy.html terms.html publisher-agreement.html rewards-terms.html contact.html; do
+            test -s "dist/$file"
+          done
+          grep -q 'RewardBridge' dist/index.html
+          if grep -RIlE '(CPX_SECURE_HASH|CPX_POSTBACK_TOKEN|PAYPAL_CLIENT_SECRET|SUPABASE_SERVICE_ROLE_KEY|sb_secret_)' dist; then
+            echo 'Forbidden secret marker found in static release.' >&2
+            exit 1
+          fi
+          if find dist -type f -size +10M -print -quit | grep -q .; then
+            echo 'Static release contains a file larger than 10 MB.' >&2
+            exit 1
+          fi
+          find dist -type f -print0 | sort -z | xargs -0 sha256sum > dist/SHA256SUMS.txt
+          (cd dist && zip -9 -r ../RewardBridge-InfinityFree-upload.zip .)
+          test -s RewardBridge-InfinityFree-upload.zip
+
+      - name: Upload verified package
+        uses: actions/upload-artifact@v4
+        with:
+          name: RewardBridge-InfinityFree-upload
+          path: RewardBridge-InfinityFree-upload.zip
+          if-no-files-found: error
+          retention-days: 30
