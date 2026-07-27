@@ -11,63 +11,101 @@
 
 The production database currently includes:
 
-- publisher accounts and projects
-- isolated project API keys
-- end-user mappings and survey sessions
+- publisher accounts and isolated publisher projects
+- project API keys stored as hashes
+- end-user mappings and short-lived survey sessions
 - raw provider events and provider transactions
-- provider cash receipts and reconciliation
+- provider cash receipts and owner reconciliation
 - append-only multi-scope ledger entries
-- publisher and end-user payout requests
-- verified payout-method workflow
-- risk signals, webhooks, agreement acceptance, and owner audit logs
-- fixed $25 publisher withdrawal minimum
+- CPX completion allocation: 45% end user, 25% platform, 10% reserve, 20% publisher
+- CPX bonus allocation: 100% end user
+- fixed $25 automatic publisher payout review threshold
 - configurable end-user minimum with a hard $2 floor
-- 25% platform fee and 10% initial reserve
+- automatic movement of the full eligible publisher balance from available to held
+- one active publisher payout review per publisher
+- verified PayPal destination workflow
+- owner approval, return-to-review, mark-paid, failure, rejection, pause, and resume controls
+- payment-reference and destination-snapshot evidence
+- append-only payout review events and owner audit logs
+- publisher-safe payout RPC with simplified status and masked destination
+- no publisher direct access to internal payout request rows
 - global managed-network activation lock
-- active AppDeploy URL, future InfinityFree URL, Worker URL, and support-email configuration
+
+## Publisher payout state model
+
+```text
+available cleared publisher margin
+  → automatic review at $25
+  → held balance
+  → owner approval
+  → processing
+  → paid and settled
+```
+
+Failure and rejection use compensating entries to remove the amount from held and return it to available. The publisher is paused to prevent immediate automatic requeue until the issue is resolved and payouts are resumed.
 
 ## Deployed Edge Functions
 
 - `platform-status` — public read-only status for the Worker and frontend
 - `project-api-key` — one-time publisher secret-key generation and rotation
 - `survey-session` — authenticated server-to-server hosted-session creation
-- `cpx-surveys` — CPX API survey retrieval, project economics, and owner-value ranking
-- `survey-portal` — short-lived session exchange and hosted survey-wall preparation
-- `cpx-postback` — provider event intake, pending allocation, duplicate handling, and reversals
-- `payout-dispatch` — owner-only PayPal Payouts batching and status synchronization
+- `cpx-surveys` — CPX API survey retrieval and fixed reward calculation
+- `survey-portal` — short-lived session exchange and hosted survey preparation
+- `cpx-postback` — CPX source-IP and secure-hash validation, pending allocation, idempotency, and reversals
+- `payout-dispatch` — owner-only safety guard; automatic PayPal API dispatch is disabled
 
-## Required Edge Function secrets
-
-Do not commit these values:
+## Current payout execution mode
 
 ```text
-CPX_APP_ID
-CPX_SECURE_HASH
-CPX_POSTBACK_TOKEN
-PAYPAL_CLIENT_ID
-PAYPAL_CLIENT_SECRET
-PAYPAL_MODE=sandbox
+publisher_auto_review_enabled=true
+publisher_payment_execution_mode=owner_confirmed
+publisher_payout_min_usd=25.00
 ```
 
-Supabase provides its own project URL, publishable keys, and backend secret keys to hosted Edge Functions. The browser uses only the public publishable key.
+The owner dashboard performs two separate actions:
 
-## Auth URL configuration still required
+1. Approve the reviewed payout after destination and account checks.
+2. Record payment only after the payment has actually been completed, using a payment reference.
 
-Set the Supabase Auth Site URL to:
+PayPal API credentials are not required for this mode. Adding them does not activate automatic dispatch because the deployed `payout-dispatch` function is a fail-closed guard.
+
+## Required Edge Function secret
+
+Do not commit this value:
+
+```text
+CPX_SECURE_HASH
+```
+
+`CPX_APP_ID=34813` is stored in protected platform configuration. Supabase provides its own project URL and backend keys to hosted Edge Functions. The browser uses only the public publishable key.
+
+## Auth URL configuration
+
+Active Site URL:
 
 ```text
 https://6028ef2dad7c557eb4.v2.appdeploy.ai/
 ```
 
-Add these redirect URLs:
+Allowed redirect URLs:
 
 ```text
 https://6028ef2dad7c557eb4.v2.appdeploy.ai/**
 https://rewardbridge.freehosting.dev/**
 ```
 
-Do not change the active site URL to InfinityFree until the staged copy is verified and the platform setting is deliberately switched.
+Do not change the active Site URL to InfinityFree until the staged copy is verified and the platform setting is deliberately switched.
+
+## Verification completed
+
+- Full automatic-review → approve → mark-paid flow passed inside a rollback transaction.
+- The test moved $30 from available to held and then to settled.
+- The paid action required a verified destination and payment reference.
+- All synthetic users, payouts, payout events, and ledger rows were rolled back.
+- Current production counts remain zero for publishers, payouts, payout events, and ledger entries.
+- Security review closed direct publisher access to internal payout rows and the internal trigger RPC.
+- Performance review indexes the new payout audit foreign keys.
 
 ## Activation rule
 
-The managed-network flag must remain false until written CPX approval, provider credentials, exact postback macros, reversal testing, and payout sandbox testing are complete.
+The managed-network flag remains false until the complete publisher, project, survey, reversal, provider-receipt, payout-review, and payment-record path has been verified with controlled production evidence.
