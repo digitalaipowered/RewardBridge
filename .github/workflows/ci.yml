@@ -1,0 +1,61 @@
+name: RewardBridge source QA
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rewardbridge-source-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package.json
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Build static frontend
+        run: npm run build
+
+      - name: Validate release and legal pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in index.html privacy.html terms.html publisher-agreement.html rewards-terms.html contact.html; do
+            test -s "dist/$file"
+          done
+          grep -q 'RewardBridge' dist/index.html
+          node --check cloudflare/merged-worker.js
+          if grep -RIlE '(CPX_SECURE_HASH|CPX_POSTBACK_TOKEN|PAYPAL_CLIENT_SECRET|SUPABASE_SERVICE_ROLE_KEY|sb_secret_)' dist cloudflare; then
+            echo 'Forbidden secret marker found in deployable source.' >&2
+            exit 1
+          fi
+
+      - name: Upload source-built frontend
+        uses: actions/upload-artifact@v4
+        with:
+          name: RewardBridge-source-built-frontend
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
