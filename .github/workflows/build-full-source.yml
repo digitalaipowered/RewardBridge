@@ -1,0 +1,78 @@
+name: Build RewardBridge full source package
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rewardbridge-full-source-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Validate source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s package.json
+          test -s src/RewardBridgeApp.tsx
+          test -s backend/index.ts
+          test -s cloudflare/merged-worker.js
+          test -s supabase/migrations/20260727_0540_activate_cpx_and_fix_publisher_setup.sql
+          grep -q 'CPX App 34813 active' src/RewardBridgeApp.tsx
+          grep -q 'managedNetworkEnabled: true' backend/index.ts
+          grep -q 'extensions.gen_random_bytes(24)' supabase/migrations/20260727_0540_activate_cpx_and_fix_publisher_setup.sql
+          if grep -RIlE '(CPX_SECURE_HASH[[:space:]]*=|CPX_POSTBACK_TOKEN[[:space:]]*=|PAYPAL_CLIENT_SECRET[[:space:]]*=|SUPABASE_SERVICE_ROLE_KEY[[:space:]]*=|sb_secret_[A-Za-z0-9_-]+|cfat_[A-Za-z0-9_-]+)' \
+            --exclude-dir=.git --exclude='*.md' --exclude='*.yml' --exclude='*.yaml' .; then
+            echo 'Forbidden secret value marker found in repository source.' >&2
+            exit 1
+          fi
+
+      - name: Build and type-check frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run typecheck
+          npm run build
+
+      - name: Create full source package
+        shell: bash
+        run: |
+          set -euo pipefail
+          package='RewardBridge-v0.1.1-full-source'
+          rm -rf "$package" "$package.zip" "$package.sha256.txt"
+          mkdir "$package"
+          rsync -a ./ "$package/" \
+            --exclude '.git/' \
+            --exclude 'node_modules/' \
+            --exclude 'dist/' \
+            --exclude "$package/" \
+            --exclude "$package.zip" \
+            --exclude "$package.sha256.txt"
+          find "$package" -type d -name '__pycache__' -prune -exec rm -rf {} +
+          find "$package" -type f \( -name '*.pyc' -o -name '.DS_Store' \) -delete
+          printf '%s\n' "Source commit: $GITHUB_SHA" > "$package/RELEASE-COMMIT.txt"
+          (cd "$package" && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          zip -9 -r "$package.zip" "$package"
+          sha256sum "$package.zip" > "$package.sha256.txt"
+          test -s "$package.zip"
+
+      - name: Upload full source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: RewardBridge-v0.1.1-full-source
+          path: |
+            RewardBridge-v0.1.1-full-source.zip
+            RewardBridge-v0.1.1-full-source.sha256.txt
+          if-no-files-found: error
+          retention-days: 30
