@@ -7,29 +7,57 @@
 - URL: `https://fmywfaffczulebozlpsx.supabase.co`
 - Region: `us-east-2`
 
+## Active provider configuration
+
+```text
+CPX App ID: 34813
+Managed network enabled: true
+Completion reward factor: 0.45
+Bonus reward factor: 1.00
+```
+
+CPX App 34813 is approved and active. Publisher and project status, allowed origins, provider cash reconciliation, fraud controls, and payout controls remain independently enforceable.
+
 ## Deployed database controls
 
 The production database currently includes:
 
 - publisher accounts and isolated publisher projects
+- unique project application URLs per publisher
 - project API keys stored as hashes
+- project-key entropy generated through `extensions.gen_random_bytes()`
 - end-user mappings and short-lived survey sessions
 - raw provider events and provider transactions
 - provider cash receipts and owner reconciliation
 - append-only multi-scope ledger entries
 - CPX completion allocation: 45% end user, 25% platform, 10% reserve, 20% publisher
 - CPX bonus allocation: 100% end user
+- fixed publisher-pool share value: 69.230769%, stored at six-decimal precision
 - fixed $25 automatic publisher payout review threshold
 - configurable end-user minimum with a hard $2 floor
 - automatic movement of the full eligible publisher balance from available to held
 - one active publisher payout review per publisher
-- verified PayPal destination workflow
+- normalized PayPal destination validation and verification workflow
 - owner approval, return-to-review, mark-paid, failure, rejection, pause, and resume controls
 - payment-reference and destination-snapshot evidence
 - append-only payout review events and owner audit logs
 - publisher-safe payout RPC with simplified status and masked destination
 - no publisher direct access to internal payout request rows
-- global managed-network activation lock
+
+## Active initial records
+
+```text
+Publisher: Crimson
+Publisher status: approved
+CPX network status: active
+Project: Crimson Forge
+Project URL: https://crimsonforge.gamer.gd
+Project status: active
+End-user payout minimum: $5.00
+PayPal destination: submitted, pending verification
+```
+
+No publisher reward, payout, or ledger value was fabricated during setup.
 
 ## Publisher payout state model
 
@@ -98,14 +126,17 @@ Do not change the active Site URL to InfinityFree until the staged copy is verif
 
 ## Verification completed
 
+- The project-creation failure caused by the pgcrypto schema was reproduced and fixed.
+- The reward-share precision constraint failure was reproduced and fixed.
+- The valid PayPal destination rejection was reproduced and fixed.
+- Crimson Forge was created once and activated at its production URL.
+- The owner PayPal destination was accepted and stored as pending verification.
 - Full automatic-review → approve → mark-paid flow passed inside a rollback transaction.
-- The test moved $30 from available to held and then to settled.
-- The paid action required a verified destination and payment reference.
-- All synthetic users, payouts, payout events, and ledger rows were rolled back.
-- Current production counts remain zero for publishers, payouts, payout events, and ledger entries.
+- The payout test moved $30 from available to held and then to settled.
+- All synthetic payout test records were rolled back.
 - Security review closed direct publisher access to internal payout rows and the internal trigger RPC.
-- Performance review indexes the new payout audit foreign keys.
+- Performance review indexes the payout audit foreign keys.
 
-## Activation rule
+## Controlled rollout rule
 
-The managed-network flag remains false until the complete publisher, project, survey, reversal, provider-receipt, payout-review, and payment-record path has been verified with controlled production evidence.
+The managed network is active. New publishers, projects, app origins, credentials, and payout destinations remain reviewable and pausable. Provider-reported revenue remains pending until corresponding CPX cash is received and reconciled.
