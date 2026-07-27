@@ -28,10 +28,11 @@ The production database currently includes:
 
 ## Deployed Edge Functions
 
-- `platform-status` — public read-only status
+- `platform-status` — public read-only status for the Worker and frontend
 - `project-api-key` — one-time publisher secret-key generation and rotation
 - `survey-session` — authenticated server-to-server hosted-session creation
-- `survey-portal` — short-lived session exchange and CPX wall preparation
+- `cpx-surveys` — CPX API survey retrieval, project economics, and owner-value ranking
+- `survey-portal` — short-lived session exchange and hosted survey-wall preparation
 - `cpx-postback` — provider event intake, pending allocation, duplicate handling, and reversals
 - `payout-dispatch` — owner-only PayPal Payouts batching and status synchronization
 
