@@ -4,14 +4,28 @@ RewardBridge is a controlled-beta managed survey infrastructure platform for web
 
 ## Current production state
 
-- Active site: https://6028ef2dad7c557eb4.v2.appdeploy.ai/
-- Reserved future site: https://rewardbridge.freehosting.dev/
+- Active frontend: https://6028ef2dad7c557eb4.v2.appdeploy.ai/
+- Reserved future frontend: https://rewardbridge.freehosting.dev/
 - Supabase project ref: `fmywfaffczulebozlpsx`
 - Supabase region: `us-east-2`
-- Requested Worker: `https://misty-mode-a1d4.digitala-ipowered.workers.dev`
+- Gateway Worker: https://misty-mode-a1d4.digitala-ipowered.workers.dev/rewardbridge/
 - Publisher withdrawal minimum: **$25.00**
 - Lowest permitted end-user payout minimum: **$2.00**
+- Platform fee: **25%**
+- Initial risk reserve: **10%**
 - Managed CPX traffic: **disabled pending written CPX approval**
+
+## Repository contents
+
+- `src/` — production React frontend source
+- `public/` — Privacy, Terms, Publisher Agreement, Rewards Terms, and Contact pages
+- `cloudflare/merged-worker.js` — full misty-mode Worker preserving Crimson Forge/GamePix routes and adding isolated RewardBridge routes
+- `wrangler.toml` — merged Worker deployment configuration
+- `supabase/README.md` — deployed database and Edge Function status
+- `setup/REQUIRED_CONFIGURATION.md` — remaining owner-side setup
+- `.github/workflows/build-infinityfree.yml` — creates a validated InfinityFree upload ZIP
+- `.github/workflows/stage-infinityfree.yml` — manual FTPS staging deployment
+- `.github/workflows/deploy-worker.yml` — manual guarded Worker deployment
 
 ## Safety boundaries
 
@@ -20,23 +34,26 @@ RewardBridge is a controlled-beta managed survey infrastructure platform for web
 - Financial ledger entries are append-only.
 - Project secret API keys are stored as hashes and shown once when generated.
 - PayPal dispatch remains inactive until approved credentials and verified payout destinations are configured.
-- Do not commit CPX secure hashes, postback tokens, PayPal secrets, Supabase secret keys, or FTP passwords.
+- Never commit CPX secure hashes, postback tokens, PayPal secrets, Supabase secret keys, Cloudflare tokens, or FTP passwords.
 
-## InfinityFree staging
+## InfinityFree
 
-The workflow at `.github/workflows/stage-infinityfree.yml` mirrors the verified AppDeploy frontend and uploads it to `/htdocs` through FTPS. It is manual-only and requires the following repository secrets:
+`build-infinityfree.yml` mirrors and validates the verified AppDeploy release, adds `.htaccess`, scans for forbidden secret markers, generates SHA-256 checksums, and produces `RewardBridge-InfinityFree-upload.zip` as a GitHub Actions artifact.
+
+`stage-infinityfree.yml` can upload the validated release to `/htdocs` after these repository secrets are added:
 
 - `INFINITYFREE_FTP_USERNAME`
 - `INFINITYFREE_FTP_PASSWORD`
 
-The FTP hostname is fixed to `ftpupload.net`. Rotate the password shown in any screenshot before storing it as a GitHub secret.
+Rotate any password exposed in a screenshot before storing it as a secret.
 
 ## Required before live CPX traffic
 
 1. Receive written CPX approval for the managed distribution structure.
 2. Create the CPX application using the active AppDeploy URL.
 3. Confirm exact CPX postback placeholders and reversal status values.
-4. Configure CPX secrets in Supabase Edge Function secrets.
-5. Complete PayPal Payouts sandbox validation.
-6. Obtain professional legal review of the public policies and publisher agreement.
-7. Keep the global managed-network switch disabled until all items above are verified.
+4. Configure CPX and PayPal secrets in Supabase Edge Function secrets.
+5. Add the active and future frontend URLs to Supabase Auth URL Configuration.
+6. Complete PayPal Payouts sandbox validation.
+7. Obtain professional legal review of the public policies and publisher agreement.
+8. Keep the global managed-network switch disabled until all items are verified.
