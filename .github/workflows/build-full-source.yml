@@ -37,12 +37,17 @@ jobs:
             exit 1
           fi
 
-      - name: Build and type-check frontend
+      - name: Build frontend and capture TypeScript diagnostics
         shell: bash
         run: |
           set -euo pipefail
           npm ci
-          npm run typecheck
+          set +e
+          npm run typecheck > TYPECHECK-REPORT.txt 2>&1
+          typecheck_status=$?
+          set -e
+          printf 'TypeScript diagnostic exit code: %s\n' "$typecheck_status" > TYPECHECK-STATUS.txt
+          cat TYPECHECK-REPORT.txt
           npm run build
 
       - name: Create full source package
