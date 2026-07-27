@@ -23,11 +23,12 @@ The `platform_settings` record currently enforces:
 ## Deployed Edge Functions
 
 - `platform-status` — public safe configuration response
-- `project-api-key` — authenticated one-time project secret generation
+- `project-api-key` — authenticated one-time project secret generation with strict dashboard origin checks
 - `survey-session` — project-key authenticated short-lived session creation
-- `survey-portal` — hosted session validation and CPX wall preparation
+- `cpx-surveys` — user-specific CPX API retrieval, project reward calculation, gross-payout suppression, and 120-second refresh control
+- `survey-portal` — retired iframe endpoint that now returns HTTP 410 fail-closed
 - `cpx-postback` — token-authenticated provider event processing
-- `payout-dispatch` — owner-only PayPal Payouts dispatch and synchronization
+- `payout-dispatch` — owner-only PayPal Payouts dispatch and synchronization with strict dashboard origin checks
 
 ## Financial controls
 
@@ -40,10 +41,13 @@ The `platform_settings` record currently enforces:
 - Failed PayPal payouts restore the publisher balance through a compensating entry
 - Publisher payout requests require at least `$25.00`
 - End-user payout requests enforce each project's configured minimum and the global `$2.00` floor
+- Managed CPX traffic remains globally disabled pending written provider approval
 
 ## Still required outside the available connector
 
 Supabase Auth's dashboard-level URL configuration must include the live AppDeploy URL now and the InfinityFree URL before Magic Link testing on InfinityFree. The current connector can manage the database and Edge Functions but does not expose Auth URL allowlist management.
+
+Edge Function production secrets also require dashboard or CLI access after the CPX application and PayPal sandbox application exist.
 
 ## Secrets still required before activation
 
@@ -54,4 +58,4 @@ Supabase Auth's dashboard-level URL configuration must include the live AppDeplo
 - `PAYPAL_CLIENT_SECRET`
 - `PAYPAL_MODE`
 
-Do not configure CPX secrets until the CPX application exists and the exact postback fields have been confirmed.
+Do not configure CPX secrets until the CPX application exists and the exact postback fields have been confirmed. Keep `PAYPAL_MODE=sandbox` until complete payout, failure, retry, and balance-restoration tests pass.
