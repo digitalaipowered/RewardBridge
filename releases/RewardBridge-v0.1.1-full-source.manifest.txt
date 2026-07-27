@@ -1,0 +1,30 @@
+RewardBridge v0.1.1 — CPX Active Mobile UX Repair
+Release date: 2026-07-27
+
+Production state
+- CPX App 34813 approved and active
+- Crimson Forge project active at https://crimsonforge.gamer.gd
+- End-user payout minimum: $5.00
+- Completion reward: 45% gross
+- CPX bonus pass-through: 100% to user
+- Publisher payout review threshold: $25.00
+- Publisher payment execution: owner-confirmed
+
+Fixed production defects
+- Project key generation uses extensions.gen_random_bytes(24)
+- Reward-share precision stores exact 69.230769 publisher-pool percentage
+- Valid PayPal email destinations no longer fail due to over-escaped validation
+- Survey portal error handling accepts nullable Supabase function payloads
+- Stale CPX pending-approval states are replaced with active controlled-rollout state
+- Mobile dashboard is reorganized into a compact summary and anchored sections
+- Static-release secret scans detect real secret values without rejecting public Supabase SDK validation code
+
+Package contract
+- Complete repository source
+- AppDeploy frontend and backend source
+- Cloudflare Worker source and deployment configuration
+- Supabase migration and operational documentation
+- Public legal pages and QA definitions
+- No node_modules, dist output, transient caches, diagnostic workflows, or secret values
+- Per-file SHA-256 manifest inside the ZIP
+- External SHA-256 checksum beside the ZIP
