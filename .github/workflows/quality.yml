@@ -1,0 +1,60 @@
+name: RewardBridge Quality Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rewardbridge-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check source
+        run: npm run typecheck
+
+      - name: Build static release
+        run: npm run build
+
+      - name: Validate release contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/index.html
+          test -s dist/privacy.html
+          test -s dist/terms.html
+          test -s dist/publisher-agreement.html
+          test -s dist/rewards-terms.html
+          test -s dist/contact.html
+          if grep -RIlE '(CPX_SECURE_HASH|CPX_POSTBACK_TOKEN|PAYPAL_CLIENT_SECRET|SUPABASE_SERVICE_ROLE_KEY|sb_secret_)' dist; then
+            echo 'A forbidden secret marker was found in the static release.' >&2
+            exit 1
+          fi
+
+      - name: Upload verified static release
+        uses: actions/upload-artifact@v4
+        with:
+          name: rewardbridge-static-release
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
