@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: Type DEPLOY to upload the current verified AppDeploy build
+        description: Type DEPLOY to build and upload RewardBridge to InfinityFree
         required: true
         type: string
 
@@ -16,31 +16,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  mirror-and-deploy:
+  build-and-deploy:
     if: ${{ inputs.confirmation == 'DEPLOY' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
-      - name: Check out deployment configuration
+      - name: Check out verified source
         uses: actions/checkout@v6
 
-      - name: Mirror the verified AppDeploy frontend
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf mirror dist
-          mkdir -p mirror dist
-          wget \
-            --mirror \
-            --convert-links \
-            --adjust-extension \
-            --page-requisites \
-            --no-parent \
-            --domains 6028ef2dad7c557eb4.v2.appdeploy.ai \
-            --directory-prefix mirror \
-            https://6028ef2dad7c557eb4.v2.appdeploy.ai/
-          cp -a mirror/6028ef2dad7c557eb4.v2.appdeploy.ai/. dist/
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Type-check source
+        run: npm run typecheck
+
+      - name: Build static release
+        run: npm run build
 
       - name: Add InfinityFree Apache safeguards
         shell: bash
@@ -61,7 +58,7 @@ jobs:
           </IfModule>
           HTACCESS
 
-      - name: Validate mirrored release
+      - name: Validate static release
         shell: bash
         run: |
           set -euo pipefail
