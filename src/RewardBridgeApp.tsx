@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { WORKER_BASE } from './config';
 import { AlertTriangle, CheckCircle, Code, Copy, DollarSign, ExternalLink, Loader2, Lock, LogOut, Mail, Network, Plus, Settings, ShieldCheck, Users, Wallet } from 'lucide-react';
 import { supabase } from './supabase';
+import SurveyPortal from './SurveyPortal';
 
 type PublisherAccount = { id: string; legal_name: string; display_name: string; contact_email: string; country_code: string; status: string; cpx_network_status: string; publisher_payout_min_usd: number };
 type Project = { id: string; name: string; app_url: string; status: string; public_key: string; user_payout_min_usd: number; user_reward_share_pct: number; platform_fee_pct: number; risk_reserve_pct: number; cpx_subid: string };
@@ -43,7 +44,6 @@ function RewardBridgeApp() {
   const [projectForm, setProjectForm] = useState({ name: '', url: '', payoutMin: '5.00', userShare: '70' });
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [portalSessionToken] = useState(() => new URLSearchParams(window.location.search).get('session') || '');
-  const [portalState, setPortalState] = useState<{ status: 'loading' | 'ready' | 'error'; embedUrl?: string; message?: string }>({ status: 'loading' });
 
   useEffect(() => {
     const loadPlatformStatus = async () => {
@@ -106,21 +106,6 @@ function RewardBridgeApp() {
   };
 
   useEffect(() => { if (session) void loadData(); else { setAccount(null); setProjects([]); setLedger([]); } }, [session]);
-
-  useEffect(() => {
-    if (!portalSessionToken) return;
-    const cleanUrl = new URL(window.location.href);
-    cleanUrl.searchParams.delete('session');
-    window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
-    supabase.functions.invoke('survey-portal', { body: { session_token: portalSessionToken } }).then(({ data, error }) => {
-      if (error || !data?.embed_url) {
-        const message = data?.detail || data?.error || error?.message || 'This survey session is unavailable.';
-        setPortalState({ status: 'error', message });
-        return;
-      }
-      setPortalState({ status: 'ready', embedUrl: data.embed_url });
-    }).catch(() => setPortalState({ status: 'error', message: 'This survey session is unavailable.' }));
-  }, [portalSessionToken]);
 
   const availableBalance = useMemo(() => ledger.filter(item => item.balance_state === 'available').reduce((sum, item) => sum + Number(item.amount_usd), 0), [ledger]);
   const pendingBalance = useMemo(() => ledger.filter(item => item.balance_state === 'pending').reduce((sum, item) => sum + Number(item.amount_usd), 0), [ledger]);
@@ -204,7 +189,7 @@ function RewardBridgeApp() {
   };
   const signOut = async () => { await supabase.auth.signOut(); setNotice('Signed out.'); };
 
-  if (portalSessionToken) return <main className="min-h-screen bg-[#f7f6ef] text-slate-900"><header className="border-b border-emerald-950/10 bg-white px-4 py-3"><div className="mx-auto flex max-w-6xl items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-emerald-950 text-white"><Network size={20} /></div><div><p className="font-serif text-xl font-black">RewardBridge Survey Portal</p><p className="text-xs font-bold uppercase tracking-wider text-emerald-800">Secure hosted session</p></div></div></header>{portalState.status === 'loading' && <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 px-6 text-center"><Loader2 className="animate-spin text-emerald-800" size={36} /><p className="font-bold">Validating your survey session…</p></div>}{portalState.status === 'error' && <div className="mx-auto flex min-h-[70vh] max-w-xl flex-col items-center justify-center px-6 text-center"><div className="grid h-14 w-14 place-items-center rounded-2xl bg-amber-100 text-amber-900"><AlertTriangle size={28} /></div><h1 className="mt-5 font-serif text-3xl font-black">Survey portal unavailable</h1><p className="mt-3 leading-7 text-slate-600">{portalState.message}</p><a href={window.location.pathname} className="mt-6 rounded-xl bg-emerald-950 px-5 py-3 font-bold text-white">Return to RewardBridge</a></div>}{portalState.status === 'ready' && portalState.embedUrl && <iframe title="RewardBridge survey portal" src={portalState.embedUrl} referrerPolicy="no-referrer" allow="camera; microphone" className="min-h-[calc(100vh-65px)] w-full border-0 bg-white" />}</main>;
+  if (portalSessionToken) return <SurveyPortal sessionToken={portalSessionToken} />;
 
   if (authLoading) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="animate-spin text-emerald-800" size={34} /></div>;
 
