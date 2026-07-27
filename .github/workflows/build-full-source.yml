@@ -37,13 +37,26 @@ jobs:
             exit 1
           fi
 
-      - name: Build and type-check frontend
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Type-check frontend
         shell: bash
         run: |
-          set -euo pipefail
-          npm ci
-          npm run typecheck
-          npm run build
+          set -o pipefail
+          npm run typecheck 2>&1 | tee typecheck.log
+
+      - name: Upload type-check diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RewardBridge-typecheck-diagnostics
+          path: typecheck.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Build frontend
+        run: npm run build
 
       - name: Create full source package
         shell: bash
@@ -56,13 +69,18 @@ jobs:
             --exclude '.git/' \
             --exclude 'node_modules/' \
             --exclude 'dist/' \
+            --exclude 'typecheck.log' \
             --exclude "$package/" \
             --exclude "$package.zip" \
             --exclude "$package.sha256.txt"
           find "$package" -type d -name '__pycache__' -prune -exec rm -rf {} +
           find "$package" -type f \( -name '*.pyc' -o -name '.DS_Store' \) -delete
           printf '%s\n' "Source commit: $GITHUB_SHA" > "$package/RELEASE-COMMIT.txt"
-          (cd "$package" && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          (
+            cd "$package"
+            find . -type f ! -name 'SHA256SUMS.txt' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+            sha256sum -c SHA256SUMS.txt
+          )
           zip -9 -r "$package.zip" "$package"
           sha256sum "$package.zip" > "$package.sha256.txt"
           test -s "$package.zip"
