@@ -26,7 +26,7 @@ type PortalPayload = {
 
 const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
-const readableError = (payload?: PortalPayload, fallback?: string) => {
+const readableError = (payload?: PortalPayload | null, fallback?: string) => {
   if (payload?.detail) return payload.detail;
   if (payload?.error === 'cpx_not_configured') return 'The survey provider is not configured yet.';
   if (payload?.error === 'managed_network_not_active') return 'Managed survey traffic is not active yet.';
