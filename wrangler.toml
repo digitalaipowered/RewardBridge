@@ -1,0 +1,14 @@
+name = "misty-mode-a1d4"
+main = "cloudflare/merged-worker.js"
+compatibility_date = "2026-07-26"
+workers_dev = true
+
+[vars]
+CRIMSON_GAMES_ALLOWED_ORIGINS = "https://crimsonforge.gamer.gd"
+GAMEPIX_PROPERTY_ID = "F7FCN"
+GAMEPIX_HOME_URL = "https://www.gamepix.com/"
+GAMEPIX_PUZZLE_URL = "https://www.gamepix.com/games/puzzle/"
+GAMEPIX_ARCADE_URL = "https://www.gamepix.com/games/arcade/"
+GAMEPIX_SPORTS_URL = "https://www.gamepix.com/games/sports/"
+GAMEPIX_MAHJONG_URL = "https://www.gamepix.com/games/mahjong/"
+GAMEPIX_ALLOWED_REDIRECT_HOSTS = "gamepix.com,www.gamepix.com,games.gamepix.com,play.gamepix.com"
