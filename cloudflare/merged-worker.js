@@ -2,7 +2,7 @@
 // Preserves Crimson Forge Browser Games v10.32.14 routes.
 // Adds RewardBridge only under /rewardbridge/*.
 
-const VERSION = '10.32.14-review-ready+rewardbridge-0.1.0';
+const VERSION = '10.32.14-review-ready+rewardbridge-0.1.1';
 const ROLE = 'browser-games-worker+rewardbridge-gateway';
 const DEFAULT_ALLOWED_ORIGIN = 'https://crimsonforge.gamer.gd';
 const REWARDBRIDGE_STATUS_URL = 'https://fmywfaffczulebozlpsx.supabase.co/functions/v1/platform-status';
@@ -105,7 +105,8 @@ async function handleRewardBridgeRequest(request) {
       ok: true,
       service: 'rewardbridge-gateway',
       version: VERSION,
-      managedNetworkEnabled: false,
+      managedNetworkEnabled: true,
+      activation: 'CPX App 34813 active',
       statusEndpoint: '/rewardbridge/api/platform-status',
     }, 200, headers);
   }
@@ -127,10 +128,10 @@ async function handleRewardBridgeRequest(request) {
       });
     } catch {
       return json({
-        managedNetworkEnabled: false,
+        managedNetworkEnabled: true,
         publisherPayoutMinimum: 25,
         userPayoutFloor: 2,
-        activation: 'CPX approval required',
+        activation: 'CPX App 34813 active; live status temporarily unavailable',
       }, 503, headers);
     }
   }
