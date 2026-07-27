@@ -1,28 +1,34 @@
-# RewardBridge routes for the existing Worker
+# RewardBridge routes on `misty-mode-a1d4`
 
-The requested Worker currently serves the Crimson Forge browser-games surface. Do not replace its entire script with RewardBridge code.
+The existing Worker serves the Crimson Forge browser-games surface. RewardBridge must never replace those routes with a standalone survey Worker.
 
-Merge `rewardbridge-routes.js` into the existing Worker and call it before the existing route switch:
+## Authoritative deployable file
 
-```js
-import { handleRewardBridgeRequest } from './rewardbridge-routes.js';
+Use `merged-worker.js`. It preserves:
 
-export default {
-  async fetch(request, env, ctx) {
-    const rewardBridgeResponse = await handleRewardBridgeRequest(request);
-    if (rewardBridgeResponse) return rewardBridgeResponse;
+- `/`
+- `/health`
+- `/ads.txt`
+- `/api/games/config`
+- `/api/games/launch`
+- `/robots.txt`
 
-    // Continue into the existing Crimson Forge games, ads.txt and health routes.
-    return handleExistingCrimsonForgeRequest(request, env, ctx);
-  },
-};
-```
+It adds only:
 
-Prepared routes:
+- `/rewardbridge/`
+- `/rewardbridge/health`
+- `/rewardbridge/api/health`
+- `/rewardbridge/api/platform-status`
 
-- `GET /rewardbridge/health`
-- `GET /rewardbridge/api/platform-status`
+The RewardBridge status route proxies the public, read-only Supabase `platform-status` Edge Function and returns a locked fallback when that service is unavailable.
 
-The adapter contains no provider or database secret. It proxies only the public Supabase `platform-status` Edge Function and uses a fail-closed response if the upstream is unavailable.
+## Deployment guard
 
-Do not deploy this directory by itself to `misty-mode-a1d4`; doing so would remove the existing GamePix and ads.txt behavior. A merged source or the original Worker source is required first.
+`.github/workflows/deploy-worker.yml` is manual-only. It validates the preserved GamePix routes, exact ads.txt property marker, RewardBridge route, and forbidden-secret patterns before deploying. The workflow requires repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+Do not paste CPX, PayPal, Supabase service-role, or publisher project secrets into this Worker.
+
+`rewardbridge-routes.js` remains as a small reference adapter. It is not a complete replacement Worker.
