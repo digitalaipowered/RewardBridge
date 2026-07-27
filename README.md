@@ -9,11 +9,16 @@ RewardBridge is a controlled-beta managed survey infrastructure platform for web
 - Supabase project ref: `fmywfaffczulebozlpsx`
 - Supabase region: `us-east-2`
 - Gateway Worker: https://misty-mode-a1d4.digitala-ipowered.workers.dev/rewardbridge/
-- Publisher withdrawal minimum: **$25.00**
-- Lowest permitted end-user payout minimum: **$2.00**
+- CPX App ID: **34813**
+- CPX completion reward factor: **45%**
+- CPX bonus pass-through: **100% to the end user**
 - Platform fee: **25%**
-- Initial risk reserve: **10%**
-- Managed CPX traffic: **disabled pending written CPX approval**
+- Risk reserve: **10%**
+- Publisher margin: **20%**
+- Automatic publisher payout review threshold: **$25.00 cleared balance**
+- Lowest permitted end-user payout minimum: **$2.00**
+- Publisher payment execution: **owner-confirmed after review**
+- Managed CPX traffic: **disabled by the global activation lock**
 
 ## Repository contents
 
@@ -22,38 +27,51 @@ RewardBridge is a controlled-beta managed survey infrastructure platform for web
 - `cloudflare/merged-worker.js` — full misty-mode Worker preserving Crimson Forge/GamePix routes and adding isolated RewardBridge routes
 - `wrangler.toml` — merged Worker deployment configuration
 - `supabase/README.md` — deployed database and Edge Function status
+- `setup/CPX_APP_34813.md` — exact CPX application contract
+- `setup/PUBLISHER_PAYOUT_WORKFLOW.md` — automatic publisher review and owner settlement procedure
 - `setup/REQUIRED_CONFIGURATION.md` — remaining owner-side setup
 - `.github/workflows/build-infinityfree.yml` — creates a validated InfinityFree upload ZIP
 - `.github/workflows/stage-infinityfree.yml` — manual FTPS staging deployment
 - `.github/workflows/deploy-worker.yml` — manual guarded Worker deployment
 
+## Payout controls
+
+- Eligible cleared publisher margin enters review automatically when it reaches $25.
+- The full eligible balance is moved from available to held so it cannot be included in another payout.
+- Each publisher may have only one active publisher payout review.
+- Publisher-facing statuses are limited to Under review, Processing, Paid, and Action needed.
+- Destination verification, owner notes, destination snapshots, and payment references are owner-only.
+- A payout must be approved before it can be recorded as paid.
+- Recording payment requires a verified destination and payment reference.
+- Failed or rejected reviews release held funds through compensating ledger entries and pause further payout review until resumed.
+- Automatic PayPal API dispatch is disabled; adding PayPal credentials cannot silently activate automatic payments.
+
 ## Safety boundaries
 
 - CPX provider events create pending records only.
 - Funds are released only after the matching provider payment is received and reconciled.
-- Financial ledger entries are append-only.
+- Financial ledger and payout-event records are append-only.
 - Project secret API keys are stored as hashes and shown once when generated.
-- PayPal dispatch remains inactive until approved credentials and verified payout destinations are configured.
-- Never commit CPX secure hashes, postback tokens, PayPal secrets, Supabase secret keys, Cloudflare tokens, or FTP passwords.
+- Publishers cannot directly read internal payout request rows or owner review fields.
+- Never commit CPX secure hashes, Supabase secret keys, Cloudflare tokens, FTP passwords, or payment credentials.
 
 ## InfinityFree
 
-`build-infinityfree.yml` mirrors and validates the verified AppDeploy release, adds `.htaccess`, scans for forbidden secret markers, generates SHA-256 checksums, and produces `RewardBridge-InfinityFree-upload.zip` as a GitHub Actions artifact.
+`build-infinityfree.yml` builds and validates the repository frontend, adds `.htaccess`, scans for forbidden secret markers, generates SHA-256 checksums, and produces `RewardBridge-InfinityFree-upload.zip` as a GitHub Actions artifact.
 
 `stage-infinityfree.yml` can upload the validated release to `/htdocs` after these repository secrets are added:
 
 - `INFINITYFREE_FTP_USERNAME`
 - `INFINITYFREE_FTP_PASSWORD`
 
-Rotate any password exposed in a screenshot before storing it as a secret.
+Keep AppDeploy active until the InfinityFree copy, Magic Links, legal pages, Worker route, and survey portal have been tested independently.
 
-## Required before live CPX traffic
+## Required before managed publisher traffic
 
-1. Receive written CPX approval for the managed distribution structure.
-2. Create the CPX application using the active AppDeploy URL.
-3. Confirm exact CPX postback placeholders and reversal status values.
-4. Configure CPX and PayPal secrets in Supabase Edge Function secrets.
-5. Add the active and future frontend URLs to Supabase Auth URL Configuration.
-6. Complete PayPal Payouts sandbox validation.
-7. Obtain professional legal review of the public policies and publisher agreement.
-8. Keep the global managed-network switch disabled until all items are verified.
+1. Confirm the active CPX App 34813 configuration and postback test.
+2. Confirm Supabase Auth Site URL and redirect URLs.
+3. Complete the first real publisher and project review.
+4. Verify the publisher payout destination.
+5. Run a low-value end-to-end survey, reversal, provider-receipt, payout-review, and payment-record test.
+6. Obtain professional legal review of the public policies and publisher agreement.
+7. Keep the global managed-network switch disabled until all launch evidence is satisfactory.
