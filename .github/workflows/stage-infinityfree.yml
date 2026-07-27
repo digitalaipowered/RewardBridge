@@ -76,10 +76,10 @@ jobs:
             echo 'A forbidden secret marker was found in the static release.' >&2
             exit 1
           fi
-          find dist -type f -size +10M -print -quit | grep -q . && {
+          if find dist -type f -size +10M -print -quit | grep -q .; then
             echo 'InfinityFree release contains a file larger than 10 MB.' >&2
             exit 1
-          } || true
+          fi
 
       - name: Upload to InfinityFree htdocs through FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
